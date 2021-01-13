@@ -1174,6 +1174,29 @@ static int rd_kafka_ssl_set_certs (rd_kafka_t *rk, SSL_CTX *ctx,
                 check_pkey = rd_true;
         }
 
+        /*
+         * If set, can override the above, as well as do other configurations
+         * with the context object
+        */
+        if (rk->rk_conf.ssl_ctx_cb) {
+            rd_kafka_dbg(rk, SECURITY, "SSL",
+                    "Using user-defined SSL_CTX callback");
+
+            SSL_CTX *new_ctx;
+            r = rk->rk_conf.ssl_ctx_cb(rk,
+                                       (void **)(&new_ctx),
+                                       rk->rk_conf.opaque);
+
+            if (r < 0) {
+                rd_snprintf(errstr, errstr_size,
+                        "Failed to configure SSL Context: ");
+                // caller has freed new_ctx, if necessary
+                return -1;
+            }
+            SSL_CTX_free(ctx);
+            ctx = new_ctx;
+        }
+
         /* Check that a valid private/public key combo was set. */
         if (check_pkey && SSL_CTX_check_private_key(ctx) != 1) {
                 rd_snprintf(errstr, errstr_size,

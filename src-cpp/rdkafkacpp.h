@@ -649,6 +649,19 @@ class RD_EXPORT DeliveryReportCb {
   virtual ~DeliveryReportCb() { }
 };
 
+/**
+ * @brief SSL Context Configuration callback class
+ *
+ */
+class RD_EXPORT SSLContextCb {
+ public:
+ /**
+  * @breif SSL context configuration callback
+  */
+  virtual RdKafka::ErrorCode ssl_ctx_cb(void **ssl_ctx) = 0;
+
+  virtual ~SSLContextCb() { }
+};
 
 /**
  * @brief SASL/OAUTHBEARER token refresh callback class
@@ -1133,6 +1146,11 @@ class RD_EXPORT Conf {
    */
   virtual Conf::ConfResult set (const std::string &name,
                                 const std::string &value,
+                                std::string &errstr) = 0;
+
+  /* @brief Use with \p name = \c \"ssl_ctx_cb\" */
+  virtual Conf::ConfResult set (const std::string &name,
+                                SSLContextCb *ssl_ctx_cb,
                                 std::string &errstr) = 0;
 
   /** @brief Use with \p name = \c \"dr_cb\" */

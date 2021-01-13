@@ -250,6 +250,13 @@ struct rd_kafka_conf_s {
                                        void *opaque);
         } ssl;
 
+#if WITH_SSL
+   /* Callback for creating SSL context via some non-configuration method */
+   rd_kafka_resp_err_t (*ssl_ctx_cb) (rd_kafka_t *rk,
+                      void **ssl_ctx,
+                      void *opaque);
+#endif
+
         struct {
                 const struct rd_kafka_sasl_provider *provider;
                 char *principal;

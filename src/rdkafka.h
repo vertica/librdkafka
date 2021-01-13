@@ -1713,6 +1713,25 @@ rd_kafka_conf_set_background_event_cb (rd_kafka_conf_t *conf,
 
 
 /**
+ * @brief Creates the SSL context using the given callback
+ *
+ * SSL contexts are usually created by providing the locations of the
+ * various files containing certificates and keys. With this set,
+ * the client has the ability to configure and set up the context
+ * to theirs needs.
+ *
+ * This is called once during initialization and can override any other
+ * ssl configuration if set.
+ *
+ */
+RD_EXPORT
+void rd_kafka_conf_set_ssl_ctx_cb (rd_kafka_conf_t *conf,
+                   rd_kafka_resp_err_t (*ssl_ctx_cb) (rd_kafka_t *rk,
+                                                      void **ssl_ctx,
+                                                      void *opaque));
+
+
+/**
  * @deprecated See rd_kafka_conf_set_dr_msg_cb()
  */
 RD_EXPORT

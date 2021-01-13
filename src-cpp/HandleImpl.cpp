@@ -118,6 +118,11 @@ int RdKafka::stats_cb_trampoline (rd_kafka_t *rk, char *json, size_t json_len,
   return 0;
 }
 
+rd_kafka_resp_err_t RdKafka::ssl_ctx_cb_trampoline (rd_kafka_t *rk, void **ssl_ctx, void *opaque) {
+  RdKafka::HandleImpl *handle = static_cast<RdKafka::HandleImpl *>(opaque);
+
+  return static_cast<rd_kafka_resp_err_t>(handle->ssl_ctx_cb_->ssl_ctx_cb(ssl_ctx));
+}
 
 int RdKafka::socket_cb_trampoline (int domain, int type, int protocol,
                                    void *opaque) {
@@ -312,6 +317,12 @@ void RdKafka::HandleImpl::set_common_config (const RdKafka::ConfImpl *confimpl) 
     rd_kafka_conf_set_offset_commit_cb(confimpl->rk_conf_,
                                        offset_commit_cb_trampoline);
     offset_commit_cb_ = confimpl->offset_commit_cb_;
+  }
+
+  if (confimpl->ssl_ctx_cb_) {
+    rd_kafka_conf_set_ssl_ctx_cb(confimpl->rk_conf_,
+                                 RdKafka::ssl_ctx_cb_trampoline);
+    ssl_ctx_cb_ = confimpl->ssl_ctx_cb_;
   }
 
   if (confimpl->consume_cb_) {

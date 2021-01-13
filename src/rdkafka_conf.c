@@ -802,6 +802,11 @@ static const struct rd_kafka_property rd_kafka_properties[] = {
           "Client's keystore (PKCS#12) password.",
           _UNSUPPORTED_SSL
         },
+	{ _RK_GLOBAL, "ssl_ctx_cb", _RK_C_PTR,
+	  _RK(ssl_ctx_cb),
+	  "SSL context callback (set with rd_kafka_conf_set_ssl_ctx_cb())",
+          _UNSUPPORTED_SSL
+	},
         { _RK_GLOBAL, "enable.ssl.certificate.verification", _RK_C_BOOL,
           _RK(ssl.enable_verify),
           "Enable OpenSSL's builtin broker (server) certificate verification. "
@@ -2604,6 +2609,15 @@ rd_kafka_conf_set_background_event_cb (rd_kafka_conf_t *conf,
                                       event_cb);
 }
 
+#if WITH_SSL
+void rd_kafka_conf_set_ssl_ctx_cb (rd_kafka_conf_t *conf,
+                   rd_kafka_resp_err_t (*ssl_ctx_cb) (rd_kafka_t *rk,
+                                                      void **ssl_ctx,
+                                                      void *opaque)) {
+
+    conf->ssl_ctx_cb = ssl_ctx_cb;
+}
+#endif
 
 void rd_kafka_conf_set_dr_cb (rd_kafka_conf_t *conf,
 			      void (*dr_cb) (rd_kafka_t *rk,

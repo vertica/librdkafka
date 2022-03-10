@@ -676,18 +676,57 @@ static EVP_PKEY *rd_kafka_ssl_PKEY_from_string (rd_kafka_t *rk,
  *
  * @returns a new X509 on success or NULL on error.
  */
-static X509 *rd_kafka_ssl_X509_from_string (rd_kafka_t *rk, const char *str) {
+static int rd_kafka_ssl_set_cert_chain_from_string(rd_kafka_t *rk, SSL_CTX *ctx,
+                                   char *errstr, size_t errstr_size, const char *str) {
         BIO *bio = BIO_new_mem_buf((void *)str, -1);
         X509 *x509;
+        int r;
 
         x509 = PEM_read_bio_X509(bio, NULL,
                                  rd_kafka_transport_ssl_passwd_cb, rk);
+        if (!x509) {
+                rd_snprintf(errstr, errstr_size,
+                            "ssl.certificate.pem failed: "
+                            "not in PEM format?: ");
+                return -1;
+        }
+
+        r = SSL_CTX_use_certificate(ctx, x509);
+
+        X509_free(x509);
+
+        if (r == 1) {
+                int chain_cert = 1;
+
+                while ((x509 = PEM_read_bio_X509(bio, NULL,
+                                rd_kafka_transport_ssl_passwd_cb, rk))) {
+
+                        // ctx takes ownership of x509
+                        if (SSL_CTX_add_extra_chain_cert(ctx, x509) != 1) {
+                                rd_snprintf(errstr, errstr_size,
+                                        "ssl.certificate.pem failed: "
+                                        "cert %d in chain could not be added: ", chain_cert);
+                                r = -1;
+                                break;
+                        }
+
+                        chain_cert++;
+                }
+
+                // Check success, since PEM_read_bio_X509 doesn't provide a good way to differentiate error vs end-of-stream
+                if (r == 1 && !BIO_eof(bio)) {
+                        rd_snprintf(errstr, errstr_size,
+                                "ssl.certificate.pem failed: "
+                                "could not parse PEM at cert %d: ", chain_cert);
+                        r = -1;
+                }
+
+        }
 
         BIO_free(bio);
 
-        return x509;
+        return r;
 }
-
 
 #ifdef _WIN32
 
@@ -1007,23 +1046,11 @@ static int rd_kafka_ssl_set_certs (rd_kafka_t *rk, SSL_CTX *ctx,
         }
 
         if (rk->rk_conf.ssl.cert_pem) {
-                X509 *x509;
-
                 rd_kafka_dbg(rk, SECURITY, "SSL",
                              "Loading public key from string");
 
-                x509 = rd_kafka_ssl_X509_from_string(rk,
+                r = rd_kafka_ssl_set_cert_chain_from_string(rk, ctx, errstr, errstr_size,
                                                      rk->rk_conf.ssl.cert_pem);
-                if (!x509) {
-                        rd_snprintf(errstr, errstr_size,
-                                    "ssl.certificate.pem failed: "
-                                    "not in PEM format?: ");
-                        return -1;
-                }
-
-                r = SSL_CTX_use_certificate(ctx, x509);
-
-                X509_free(x509);
 
                 if (r != 1) {
                         rd_snprintf(errstr, errstr_size,
